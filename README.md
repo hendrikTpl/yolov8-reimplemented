@@ -2,11 +2,14 @@
 
 ### Requirements
 >> Python 3.8
-
+```bash
+python3.8 -m venv venv38 && source venv38/bin/activate
+```
 ### Environments
 
 ```bash
-pip install -r requirements.txt
+python -m pip install --upgrade pip
+python -m pip install -r requirements.txt 
 ```
 
 ### Training
