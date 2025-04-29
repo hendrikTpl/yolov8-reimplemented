@@ -2,14 +2,11 @@ import os
 import yaml
 from glob import glob
 import logging
-
 import cv2
 import numpy as np
 import torch
 from math import ceil
-
 from model.data.utils import pad_to, pad_xywh
-
 from typing import Tuple
 
 log = logging.getLogger("dataset")
@@ -26,10 +23,12 @@ class Dataset(torch.utils.data.Dataset):
         mode (optional, str): dataset mode (train, val, test)
         img_size (optional, Tuple[int,int]): image size to pad images to
     """
-    def __init__(self, config:str, batch_size:int=8, mode:str='train', img_size:Tuple[int,int]=(640, 640)):
+
+    def __init__(self, config: str, batch_size: int = 8, mode: str = 'train', img_size: Tuple[int, int] = (640, 640)):
         super().__init__()
         self.config = yaml.safe_load(open(config, 'r'))
-        self.dataset_path = os.path.join(os.path.dirname(config), self.config['path'])
+        self.dataset_path = os.path.join(
+            os.path.dirname(config), self.config['path'])
         self.batch_size = batch_size
         self.img_size = img_size
 
@@ -37,13 +36,16 @@ class Dataset(torch.utils.data.Dataset):
         self.mode = mode
 
         self.im_files = self.get_image_paths()
-        log.debug(f'Found {len(self.im_files)} images in {os.path.join(self.dataset_path, self.config[self.mode])}')
+        log.debug(
+            f'Found {len(self.im_files)} images in {os.path.join(self.dataset_path, self.config[self.mode])}')
 
         self.label_files = self.get_label_paths()
         if self.label_files is not None:
-            log.debug(f'Found {len(self.label_files)} labels in {os.path.join(self.dataset_path, self.config[self.mode+"_labels"])}')
+            log.debug(
+                f'Found {len(self.label_files)} labels in {os.path.join(self.dataset_path, self.config[self.mode+"_labels"])}')
         else:
-            log.debug(f'No labels found in {os.path.join(self.dataset_path, self.config[self.mode+"_labels"])}')
+            log.debug(
+                f'No labels found in {os.path.join(self.dataset_path, self.config[self.mode+"_labels"])}')
 
         self.labels = self.get_labels()
 
@@ -58,11 +60,11 @@ class Dataset(torch.utils.data.Dataset):
         im_dir = os.path.join(self.dataset_path, self.config[self.mode])
 
         image_paths = glob(os.path.join(im_dir, '*.jpg')) + \
-                      glob(os.path.join(im_dir, '*.png')) + \
-                      glob(os.path.join(im_dir, '*.jpeg'))
- 
+            glob(os.path.join(im_dir, '*.png')) + \
+            glob(os.path.join(im_dir, '*.jpeg'))
+
         return image_paths
-    
+
     def get_label_paths(self):
         """
         Get label paths from dataset directory
@@ -71,11 +73,12 @@ class Dataset(torch.utils.data.Dataset):
 
         If no label directory is found, returns None.
         """
-        label_dir = os.path.join(self.dataset_path, self.config[self.mode+'_labels'])
+        label_dir = os.path.join(
+            self.dataset_path, self.config[self.mode+'_labels'])
         if os.path.isdir(label_dir):
             return [os.path.join(label_dir, os.path.splitext(os.path.basename(p))[0]+".txt") for p in self.im_files]
         return None
-    
+
     def get_labels(self):
         """
         Gets labels from label files (assumes COCO formatting)
@@ -106,7 +109,7 @@ class Dataset(torch.utils.data.Dataset):
                 'bboxes': torch.vstack(boxes)
             })
         return labels
-    
+
     def load_image(self, idx):
         """
         Loads image at specified index and prepares for model input.
@@ -122,18 +125,19 @@ class Dataset(torch.utils.data.Dataset):
         if h0 > self.img_size[0] or w0 > self.img_size[1]:
             # Resize to have max dimension of img_size, but preserve aspect ratio
             ratio = min(self.img_size[0]/h0, self.img_size[1]/w0)
-            h, w = min(ceil(h0*ratio), self.img_size[0]), min(ceil(w0*ratio), self.img_size[1])
+            h, w = min(ceil(h0*ratio),
+                       self.img_size[0]), min(ceil(w0*ratio), self.img_size[1])
             image = cv2.resize(image, (h, w), interpolation=cv2.INTER_LINEAR)
 
         image = image.transpose((2, 0, 1))  # (h, w, 3) -> (3, h, w)
         image = torch.from_numpy(image).float() / 255.0
-        
+
         # Pad image with black bars to desired img_size
         image, pads = pad_to(image, shape=self.img_size)
 
         h, w = image.shape[-2:]
 
-        return image, pads, (h0,w0), im_id
+        return image, pads, (h0, w0), im_id
 
     def get_image_and_label(self, idx):
         """
@@ -142,8 +146,10 @@ class Dataset(torch.utils.data.Dataset):
         label = self.labels[idx]
         if idx in self.seen_idxs:
             return label
-        label['images'], label['padding'], label['orig_shapes'], label['ids'] = self.load_image(idx)
-        label['bboxes'] = pad_xywh(label['bboxes'], label['padding'], label['orig_shapes'], return_norm=True)
+        label['images'], label['padding'], label['orig_shapes'], label['ids'] = self.load_image(
+            idx)
+        label['bboxes'] = pad_xywh(
+            label['bboxes'], label['padding'], label['orig_shapes'], return_norm=True)
         self.seen_idxs.add(idx)
 
         return label
@@ -153,7 +159,7 @@ class Dataset(torch.utils.data.Dataset):
 
     def __getitem__(self, index):
         return self.get_image_and_label(index)
-    
+
     @staticmethod
     def collate_fn(batch):
         """
@@ -167,8 +173,10 @@ class Dataset(torch.utils.data.Dataset):
                 collated_batch[k] = torch.cat([b[k] for b in batch], dim=0)
             elif k in ('padding', 'orig_shapes', 'ids'):
                 collated_batch[k] = [b[k] for b in batch]
-        
-        collated_batch['batch_idx'] = [torch.full((batch[i]['cls'].shape[0],), i) for i in range(len(batch))]
-        collated_batch['batch_idx'] = torch.cat(collated_batch['batch_idx'], dim=0)
-                
+
+        collated_batch['batch_idx'] = [torch.full(
+            (batch[i]['cls'].shape[0],), i) for i in range(len(batch))]
+        collated_batch['batch_idx'] = torch.cat(
+            collated_batch['batch_idx'], dim=0)
+
         return collated_batch

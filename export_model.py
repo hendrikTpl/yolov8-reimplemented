@@ -1,12 +1,11 @@
 import argparse
-
 import torch.onnx
-
 from model.models.detection_model import DetectionModel
 
 
 def get_args():
-    parser = argparse.ArgumentParser(description='Export model to ONNX/TensorRT')
+    parser = argparse.ArgumentParser(
+        description='Export model to ONNX/TensorRT')
     parser.add_argument(
         '--config',
         type=str,
@@ -77,7 +76,7 @@ def to_onnx(args):
                       verbose=args.verbose)
 
 
-if __name__  == "__main__":
+if __name__ == "__main__":
     args = get_args()
     to_onnx(args)
     print(f"Successfully exported model to {args.output}")

@@ -1,13 +1,9 @@
 # Based on roboflow/supervision Detection class
-
 from __future__ import annotations
-
 from dataclasses import dataclass
 from typing import Iterator, List, Optional, Tuple, Union, Dict
-
 import numpy as np
 import cv2
-
 from .utils import non_max_suppression, validate_detections_fields, xyxy2xywh
 from model.data.utils import unpad_xyxy
 
@@ -157,7 +153,8 @@ class Detections:
             if all(d.__getattribute__(name) is None for d in detections_list):
                 return None
             if any(d.__getattribute__(name) is None for d in detections_list):
-                raise ValueError(f"All or none of the '{name}' fields must be None")
+                raise ValueError(
+                    f"All or none of the '{name}' fields must be None")
             return (
                 np.vstack([d.__getattribute__(name) for d in detections_list])
                 if name == "mask"
@@ -206,7 +203,7 @@ class Detections:
             tracker_id=self.tracker_id[index] if self.tracker_id is not None else None
         )
 
-    def unpad_xyxy(self, pads:Tuple[int,int,int,int]) -> None:
+    def unpad_xyxy(self, pads: Tuple[int, int, int, int]) -> None:
         """
         Remove padding from the bounding boxes based on image padding
 
@@ -216,7 +213,7 @@ class Detections:
         """
         self.xyxy = unpad_xyxy(self.xyxy, pads)
 
-    def normalize(self, im_size:Tuple[int,int]) -> None:
+    def normalize(self, im_size: Tuple[int, int]) -> None:
         """
         Normalize the bounding boxes to be between 0 and 1.
 
@@ -228,10 +225,10 @@ class Detections:
 
     def save(
         self,
-        save_path:str,
-        format:str='coco',
-        pads:Tuple[int,int,int,int]=None,
-        im_size:Tuple[int,int]=None
+        save_path: str,
+        format: str = 'coco',
+        pads: Tuple[int, int, int, int] = None,
+        im_size: Tuple[int, int] = None
     ) -> None:
         """
         Save the Detections object to a file.
@@ -258,11 +255,12 @@ class Detections:
                 cls = self.class_id[i]
                 confidence = self.confidence[i]
 
-                file.write(f'{cls} {x1:.6f} {y1:.6f} {x2:.6f} {y2:.6f} {confidence:.6f}\n')
+                file.write(
+                    f'{cls} {x1:.6f} {y1:.6f} {x2:.6f} {y2:.6f} {confidence:.6f}\n')
 
         file.close()
 
-    def view(self, image:np.ndarray, classes_dict:Dict[int,str]=None, cmap=None, num_classes:int=None) -> np.ndarray:
+    def view(self, image: np.ndarray, classes_dict: Dict[int, str] = None, cmap=None, num_classes: int = None) -> np.ndarray:
         for j in range(self.__len__()):
             x1, y1, x2, y2 = self.xyxy[j].astype(int)
             cls = self.class_id[j]
@@ -276,7 +274,8 @@ class Detections:
 
             if cmap and num_classes:
                 cls_color = cmap(cls/num_classes, bytes=True)[:3]
-                cls_color = (int(cls_color[0]), int(cls_color[1]), int(cls_color[2]))
+                cls_color = (int(cls_color[0]), int(
+                    cls_color[1]), int(cls_color[2]))
             else:
                 cls_color = (0, 255, 0)
 
@@ -286,7 +285,8 @@ class Detections:
             # draw label
             (w, h), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.6, 1)
             cv2.rectangle(image, (x1, y1), (x1+w, y1-h), cls_color, -1)
-            cv2.putText(image, label, (x1, y1), cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1, cv2.LINE_AA)
+            cv2.putText(image, label, (x1, y1),
+                        cv2.FONT_HERSHEY_SIMPLEX, 0.6, (0, 0, 0), 1, cv2.LINE_AA)
 
         return image
 
@@ -320,7 +320,7 @@ class Detections:
         return (self.xyxy[:, 3] - self.xyxy[:, 1]) * (self.xyxy[:, 2] - self.xyxy[:, 0])
 
     def with_nms(
-        self, threshold:float=0.5, class_agnostic:bool=False
+        self, threshold: float = 0.5, class_agnostic: bool = False
     ) -> Detections:
         """
         Perform non-maximum suppression on the current set of object detections.
@@ -348,7 +348,8 @@ class Detections:
         ), "Detections confidence must be given for NMS to be executed."
 
         if class_agnostic:
-            predictions = np.hstack((self.xyxy, self.confidence.reshape(-1, 1)))
+            predictions = np.hstack(
+                (self.xyxy, self.confidence.reshape(-1, 1)))
             indices = non_max_suppression(
                 predictions=predictions, iou_threshold=threshold
             )
@@ -362,5 +363,6 @@ class Detections:
         predictions = np.hstack(
             (self.xyxy, self.confidence.reshape(-1, 1), self.class_id.reshape(-1, 1))
         )
-        indices = non_max_suppression(predictions=predictions, iou_threshold=threshold)
+        indices = non_max_suppression(
+            predictions=predictions, iou_threshold=threshold)
         return self[indices]

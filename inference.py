@@ -3,11 +3,9 @@ import argparse
 import torch
 import cv2
 from matplotlib import colormaps as cm
-
 from model.models.detection_model import DetectionModel
 from model.data.dataset import Dataset
 from model.data.detections import Detections
-
 from torch.utils.data import DataLoader
 
 

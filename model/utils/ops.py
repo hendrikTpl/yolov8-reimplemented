@@ -1,11 +1,10 @@
 import torch
 import torchvision
-
 from model.modules.utils import xywh2xyxy
-
 from typing import List
 
-def nms(preds:torch.Tensor, confidence_thresh:float=0.25, iou_thresh:float=0.45) -> List[torch.Tensor]:
+
+def nms(preds: torch.Tensor, confidence_thresh: float = 0.25, iou_thresh: float = 0.45) -> List[torch.Tensor]:
     """
     Non-Maximum Suppression for predicted boxes and classes
 
@@ -22,14 +21,14 @@ def nms(preds:torch.Tensor, confidence_thresh:float=0.25, iou_thresh:float=0.45)
     nc -= 4
 
     # max confidence score among boxes
-    xc = preds[:,4:].amax(dim=1) > confidence_thresh
+    xc = preds[:, 4:].amax(dim=1) > confidence_thresh
 
     # (b, 4+nc, a) -> (b, a, 4+nc)
     preds = preds.transpose(-1, -2)
 
     preds[..., :4] = xywh2xyxy(preds[..., :4])
 
-    out = [torch.zeros((0,6), device=preds.device)] * b
+    out = [torch.zeros((0, 6), device=preds.device)] * b
 
     for i, x in enumerate(preds):
         # take max cls confidence score
@@ -45,7 +44,7 @@ def nms(preds:torch.Tensor, confidence_thresh:float=0.25, iou_thresh:float=0.45)
         confidences, cls_idxs = cls.max(dim=1, keepdim=True)
         x = torch.cat((box, confidences, cls_idxs.float()), dim=1)
 
-        keep_idxs = torchvision.ops.nms(x[:,:4], x[:,4], iou_thresh)
+        keep_idxs = torchvision.ops.nms(x[:, :4], x[:, 4], iou_thresh)
 
         out[i] = x[keep_idxs]
 

@@ -1,25 +1,26 @@
 import torch
 import torch.nn.functional as F
 import numpy as np
-
 from typing import Tuple, Any, Union
 
 
-def xywh2xyxy(xywh:np.ndarray):
+def xywh2xyxy(xywh: np.ndarray):
     """
     Convert bounding box coordinates from (xywh) to (xyxy)
     """
     xy, wh = np.split(xywh, 2, axis=-1)
     return np.concatenate((xy - wh / 2, xy + wh / 2), axis=-1)
 
-def xyxy2xywh(xyxy:np.ndarray):
+
+def xyxy2xywh(xyxy: np.ndarray):
     """
     Convert bounding box coordinates from (xyxy) to (xywh)
     """
     xy_lt, xy_rb = np.split(xyxy, 2, axis=-1)
     return np.concatenate(((xy_lt + xy_rb) / 2, xy_rb - xy_lt), axis=-1)
 
-def pad_to(x:torch.Tensor, stride:int=None, shape:Tuple[int,int]=None):
+
+def pad_to(x: torch.Tensor, stride: int = None, shape: Tuple[int, int] = None):
     """
     Pads an image with zeros to make it divisible by stride
     (Pads both top/bottom and left/right evenly) or pads to
@@ -38,19 +39,21 @@ def pad_to(x:torch.Tensor, stride:int=None, shape:Tuple[int,int]=None):
     elif shape is not None:
         h_new, w_new = shape
 
-    t, b = int((h_new-h) / 2), int(h_new-h) - int((h_new-h) / 2)
-    l, r = int((w_new-w) / 2), int(w_new-w) - int((w_new-w) / 2)
+    t, b = int((h_new - h) / 2), int(h_new - h) - int((h_new - h) / 2)
+    l, r = int((w_new - w) / 2), int(w_new - w) - int((w_new - w) / 2)
     pads = (l, r, t, b)
 
     x_padded = F.pad(x, pads, "constant", 0)
 
     return x_padded, pads
 
-def unpad(x:torch.Tensor, pads:tuple):
+
+def unpad(x: torch.Tensor, pads: tuple):
     l, r, t, b = pads
     return x[..., t:-b, l:-r]
 
-def pad_xyxy(xyxy:Union[np.ndarray, torch.Tensor], pads:Tuple[int, int, int, int], im_size:Tuple[int, int]=None, return_norm:bool=False):
+
+def pad_xyxy(xyxy: Union[np.ndarray, torch.Tensor], pads: Tuple[int, int, int, int], im_size: Tuple[int, int] = None, return_norm: bool = False):
     """
     Add padding to the bounding boxes based on image padding
 
@@ -65,25 +68,31 @@ def pad_xyxy(xyxy:Union[np.ndarray, torch.Tensor], pads:Tuple[int, int, int, int
     l, r, t, b = pads
     if return_norm and im_size is None:
         raise ValueError("im_size must be provided if return_norm is True")
-    
+
     if im_size is not None:
         h, w = im_size
-        hpad, wpad = h+b+t, w+l+r
-    
+        hpad, wpad = h + b + t, w + l + r
+
     if isinstance(xyxy, np.ndarray):
-        xyxy_unnorm = xyxy * np.array([w, h, w, h], dtype=xyxy.dtype) if im_size else xyxy
+        xyxy_unnorm = xyxy * \
+            np.array([w, h, w, h], dtype=xyxy.dtype) if im_size else xyxy
         padded = xyxy_unnorm + np.array([l, t, l, t], dtype=xyxy.dtype)
         if return_norm:
             padded /= np.array([wpad, hpad, wpad, hpad], dtype=xyxy.dtype)
         return padded
-    
-    xyxy_unnorm = xyxy * torch.tensor([w, h, w, h], dtype=xyxy.dtype, device=xyxy.device) if im_size else xyxy
-    padded = xyxy_unnorm + torch.tensor([l, t, l, t], dtype=xyxy.dtype, device=xyxy.device)
+
+    xyxy_unnorm = xyxy * \
+        torch.tensor([w, h, w, h], dtype=xyxy.dtype,
+                     device=xyxy.device) if im_size else xyxy
+    padded = xyxy_unnorm + \
+        torch.tensor([l, t, l, t], dtype=xyxy.dtype, device=xyxy.device)
     if return_norm:
-        padded /= torch.tensor([wpad, hpad, wpad, hpad], dtype=xyxy.dtype, device=xyxy.device)
+        padded /= torch.tensor([wpad, hpad, wpad, hpad],
+                               dtype=xyxy.dtype, device=xyxy.device)
     return padded
 
-def pad_xywh(xywh:Union[np.ndarray, torch.Tensor], pads:Tuple[int, int, int, int], im_size:Tuple[int, int]=None, return_norm:bool=False):
+
+def pad_xywh(xywh: Union[np.ndarray, torch.Tensor], pads: Tuple[int, int, int, int], im_size: Tuple[int, int] = None, return_norm: bool = False):
     """
     Add padding to the bounding boxes based on image padding
 
@@ -98,25 +107,31 @@ def pad_xywh(xywh:Union[np.ndarray, torch.Tensor], pads:Tuple[int, int, int, int
     l, r, t, b = pads
     if return_norm and im_size is None:
         raise ValueError("im_size must be provided if return_norm is True")
-    
+
     if im_size is not None:
         h, w = im_size
-        hpad, wpad = h+b+t, w+l+r
+        hpad, wpad = h + b + t, w + l + r
 
     if isinstance(xywh, np.ndarray):
-        xywh_unnorm = xywh * np.array([w, h, w, h], dtype=xywh.dtype) if im_size else xywh
+        xywh_unnorm = xywh * \
+            np.array([w, h, w, h], dtype=xywh.dtype) if im_size else xywh
         padded = xywh_unnorm + np.array([l, t, 0, 0], dtype=xywh.dtype)
         if return_norm:
             padded /= np.array([wpad, hpad, wpad, hpad], dtype=xywh.dtype)
         return padded
-    
-    xywh_unnorm = xywh * torch.tensor([w, h, w, h], dtype=xywh.dtype, device=xywh.device) if im_size else xywh
-    padded = xywh_unnorm + torch.tensor([l, t, 0, 0], dtype=xywh.dtype, device=xywh.device)
+
+    xywh_unnorm = xywh * \
+        torch.tensor([w, h, w, h], dtype=xywh.dtype,
+                     device=xywh.device) if im_size else xywh
+    padded = xywh_unnorm + \
+        torch.tensor([l, t, 0, 0], dtype=xywh.dtype, device=xywh.device)
     if return_norm:
-        padded /= torch.tensor([wpad, hpad, wpad, hpad], dtype=xywh.dtype, device=xywh.device)
+        padded /= torch.tensor([wpad, hpad, wpad, hpad],
+                               dtype=xywh.dtype, device=xywh.device)
     return padded
 
-def unpad_xyxy(xyxy:Union[np.ndarray, torch.Tensor], pads:Tuple[int, int, int, int]):
+
+def unpad_xyxy(xyxy: Union[np.ndarray, torch.Tensor], pads: Tuple[int, int, int, int]):
     """
     Remove padding from the bounding boxes based on image padding
 
@@ -128,6 +143,7 @@ def unpad_xyxy(xyxy:Union[np.ndarray, torch.Tensor], pads:Tuple[int, int, int, i
     if isinstance(xyxy, np.ndarray):
         return xyxy - np.array([l, t, l, t], dtype=xyxy.dtype)
     return xyxy - torch.tensor([l, t, l, t], dtype=xyxy.dtype, device=xyxy.device)
+
 
 def box_iou_batch(gt_boxes: np.ndarray, pred_boxes: np.ndarray) -> np.ndarray:
     """
@@ -156,8 +172,10 @@ def box_iou_batch(gt_boxes: np.ndarray, pred_boxes: np.ndarray) -> np.ndarray:
     top_left = np.maximum(gt_boxes[:, None, :2], pred_boxes[:, :2])
     bottom_right = np.minimum(gt_boxes[:, None, 2:], pred_boxes[:, 2:])
 
-    area_inter = np.prod(np.clip(bottom_right - top_left, a_min=0, a_max=None), 2)
+    area_inter = np.prod(
+        np.clip(bottom_right - top_left, a_min=0, a_max=None), 2)
     return area_inter / (area_true[:, None] + area_detection - area_inter)
+
 
 def non_max_suppression(predictions: np.ndarray, iou_threshold: float = 0.5) -> np.ndarray:
     """
@@ -210,22 +228,27 @@ def non_max_suppression(predictions: np.ndarray, iou_threshold: float = 0.5) -> 
 
     return keep[sort_index.argsort()]
 
-### Data validation for Detections class
-def validate_xyxy(xyxy:Any) -> None:
+# Data validation for Detections class
+
+
+def validate_xyxy(xyxy: Any) -> None:
     expected_shape = "(_, 4)"
     actual_shape = str(getattr(xyxy, "shape", None))
-    is_valid = isinstance(xyxy, np.ndarray) and xyxy.ndim == 2 and xyxy.shape[1] == 4
+    is_valid = isinstance(
+        xyxy, np.ndarray) and xyxy.ndim == 2 and xyxy.shape[1] == 4
     if not is_valid:
         raise ValueError(
             f"xyxy must be a 2D np.ndarray with shape {expected_shape}, but got shape "
             f"{actual_shape}"
         )
 
-def validate_mask(mask:Any, n:int) -> None:
+
+def validate_mask(mask: Any, n: int) -> None:
     expected_shape = f"({n}, H, W)"
     actual_shape = str(getattr(mask, "shape", None))
     is_valid = mask is None or (
-        isinstance(mask, np.ndarray) and len(mask.shape) == 3 and mask.shape[0] == n
+        isinstance(mask, np.ndarray) and len(
+            mask.shape) == 3 and mask.shape[0] == n
     )
     if not is_valid:
         raise ValueError(
@@ -234,7 +257,7 @@ def validate_mask(mask:Any, n:int) -> None:
         )
 
 
-def validate_class_id(class_id:Any, n:int) -> None:
+def validate_class_id(class_id: Any, n: int) -> None:
     expected_shape = f"({n},)"
     actual_shape = str(getattr(class_id, "shape", None))
     is_valid = class_id is None or (
@@ -247,7 +270,7 @@ def validate_class_id(class_id:Any, n:int) -> None:
         )
 
 
-def validate_confidence(confidence:Any, n:int) -> None:
+def validate_confidence(confidence: Any, n: int) -> None:
     expected_shape = f"({n},)"
     actual_shape = str(getattr(confidence, "shape", None))
     is_valid = confidence is None or (
@@ -260,7 +283,7 @@ def validate_confidence(confidence:Any, n:int) -> None:
         )
 
 
-def validate_tracker_id(tracker_id:Any, n:int) -> None:
+def validate_tracker_id(tracker_id: Any, n: int) -> None:
     expected_shape = f"({n},)"
     actual_shape = str(getattr(tracker_id, "shape", None))
     is_valid = tracker_id is None or (
@@ -271,6 +294,7 @@ def validate_tracker_id(tracker_id:Any, n:int) -> None:
             f"tracker_id must be a 1D np.ndarray with shape {expected_shape}, but got "
             f"shape {actual_shape}"
         )
+
 
 def validate_detections_fields(
     xyxy: Any,

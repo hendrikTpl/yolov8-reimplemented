@@ -1,15 +1,14 @@
 import torch
 import torch.nn as nn
-
 from model.modules import Conv, C2f, SPPF, DetectionHead
 from model.utils.loss import BaseLoss
-
 from typing import Union
 
+
 class BaseModel(nn.Module):
-    model:nn.ModuleList
-    save_idxs:set
-    loss_fn:BaseLoss
+    model: nn.ModuleList
+    save_idxs: set
+    loss_fn: BaseLoss
 
     def __init__(self, mode='train', device='cpu'):
         super().__init__()
@@ -22,24 +21,26 @@ class BaseModel(nn.Module):
         self.model = None
         self.save_idxs = set()
 
-    def load(self, weights:Union[dict, nn.Module]):
-        state_dict = weights.float().state_dict() if isinstance(weights, nn.Module) else weights
+    def load(self, weights: Union[dict, nn.Module]):
+        state_dict = weights.float().state_dict() if isinstance(
+            weights, nn.Module) else weights
         self.load_state_dict(state_dict)
 
-    def forward(self, x:torch.Tensor, *args, **kwargs):
+    def forward(self, x: torch.Tensor, *args, **kwargs):
         return self.predict(x, *args, **kwargs)
 
-    def predict(self, x:torch.Tensor, *args, **kwargs):
+    def predict(self, x: torch.Tensor, *args, **kwargs):
         preds = self._predict(x, *args, **kwargs)
         return self.postprocess(preds) if self.mode == 'eval' else preds
-    
-    def _predict(self, x:torch.Tensor, *args, **kwargs):
+
+    def _predict(self, x: torch.Tensor, *args, **kwargs):
         outputs = []
         for module in self.model:
             # If not just using previous module output
             if module.f != -1:
                 # Get list of inputs for module
-                x = outputs[module.f] if isinstance(module.f, int) else [x if i == -1 else outputs[i] for i in module.f]
+                x = outputs[module.f] if isinstance(module.f, int) else [
+                    x if i == -1 else outputs[i] for i in module.f]
                 # Don't concat if module is DetectionHead (it takes in a list)
                 if isinstance(x, list) and not isinstance(module, DetectionHead):
                     x = torch.cat(x, dim=1)
@@ -48,13 +49,13 @@ class BaseModel(nn.Module):
             outputs.append(x if module.i in self.save_idxs else None)
 
         return x
-    
-    def loss(self, batch:torch.Tensor):
+
+    def loss(self, batch: torch.Tensor):
         preds = self.forward(batch['images'].to(self.device))
         return self.loss_fn.compute_loss(batch, preds)
-    
-    def postprocess(self, preds:torch.Tensor):
+
+    def postprocess(self, preds: torch.Tensor):
         return preds
 
-    def save(self, path:str):
+    def save(self, path: str):
         torch.save(self.state_dict(), path)

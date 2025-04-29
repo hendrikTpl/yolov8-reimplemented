@@ -1,14 +1,14 @@
 import torch
 import torch.nn as nn
 import argparse
-
 from model.models.detection_model import DetectionModel
 import ultralytics
 from ultralytics.nn.modules import Conv, C2f, SPPF, Detect
 
 
 def get_args():
-    parser = argparse.ArgumentParser('Convert YOLO weights to new model weights')
+    parser = argparse.ArgumentParser(
+        'Convert YOLO weights to new model weights')
     parser.add_argument(
         '--model',
         type=str,
@@ -30,6 +30,7 @@ def get_args():
     )
     return parser.parse_args()
 
+
 def convert_yolo(yolo_model, model):
     module_count = 0
     for module in yolo_model.model:
@@ -49,10 +50,12 @@ def convert_yolo(yolo_model, model):
             convert_detect(module, model.model[module_count])
             module_count += 1
 
+
 def convert_conv(yolo_conv, conv):
     conv.conv = yolo_conv.conv
     conv.bn = yolo_conv.bn
     conv.act = yolo_conv.act
+
 
 def convert_c2f(yolo_c2f, c2f):
     c2f.hidden_size = yolo_c2f.c
@@ -61,19 +64,23 @@ def convert_c2f(yolo_c2f, c2f):
     for i, bottleneck in enumerate(yolo_c2f.m):
         convert_bottleneck(bottleneck, c2f.bottlenecks[i])
 
+
 def convert_sppf(yolo_sppf, sppf):
     convert_conv(yolo_sppf.cv1, sppf.conv1)
     convert_conv(yolo_sppf.cv2, sppf.conv2)
     sppf.maxpool = yolo_sppf.m
+
 
 def convert_bottleneck(yolo_bottleneck, bottleneck):
     convert_conv(yolo_bottleneck.cv1, bottleneck.conv1)
     convert_conv(yolo_bottleneck.cv2, bottleneck.conv2)
     bottleneck.residual = yolo_bottleneck.add
 
+
 def convert_dfl(yolo_dfl, dfl):
     dfl.in_channels = yolo_dfl.c1
     dfl.conv = yolo_dfl.conv
+
 
 def convert_detect(yolo_detect, detect):
     detect.stride = yolo_detect.stride
@@ -99,6 +106,7 @@ def convert_detect(yolo_detect, detect):
                 convert_conv(conv, detect.cls_convs[i][j])
 
     convert_dfl(yolo_detect.dfl, detect.dfl)
+
 
 if __name__ == '__main__':
     args = get_args()
