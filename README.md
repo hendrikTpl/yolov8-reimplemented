@@ -1,7 +1,13 @@
 # yolov8-reimplemented
 
 ### Requirements
+>> Python 3.8
 
+### Environments
+
+```bash
+pip install -r requirements.txt
+```
 
 ### Training
 
